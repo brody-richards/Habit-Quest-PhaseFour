@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 // phase one 
 const express = require('express');
 const https = require('https');
@@ -19,6 +21,10 @@ const bodyParser = require('body-parser');
 
 const authRoutes = require('./routes/auth');
 
+const adminRoutes = require('./routes/admin');
+
+// use admin routes
+app.use('/api/admin', adminRoutes);
 
 // middleware phase One
 
