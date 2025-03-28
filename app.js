@@ -1,3 +1,4 @@
+// phase one 
 const express = require('express');
 const https = require('https');
 const fs = require('fs');
@@ -12,6 +13,15 @@ const PORT_HTTPS = 3443;
 const helmet = require('helmet');
 const port = process.env.PORT || 3000;
 
+// phase two
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+
+const authRoutes = require('./routes/auth');
+
+
+// middleware phase One
+
 app.use(
     helmet({
         xFrameOptions: { action: "deny" },
@@ -21,6 +31,22 @@ app.use(
         }
     })
 );
+
+
+// middleware phase two
+app.use(bodyParser.json());
+
+
+// connect to mongoDB phase two
+mongoose.connect('mongodb://localhost:27017/userAuth', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => console.log("MongoDB connected!"))
+.catch(err => console.log(err));
+
+
+// import routs 
+app.use('/api/auth', authRoutes);
 
 
 app.use('/static', express.static('public', {
