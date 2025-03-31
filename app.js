@@ -5,34 +5,34 @@ const express = require('express');
 const https = require('https');
 const fs = require('fs');
 const http = require('http');
-const hsts = require('hsts');
-const path = require('path');
 
-// DB connetion
+// mongoDB 
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
+const MongoStore = require('connect-mongo'); 
 
-// middlware
+//parsing data
+const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser'); 
+
+// helmet middleware
 const helmet = require('helmet');
 
-// session
-const session = require('express-session');
-
-// google oAuth
+// passport authentication and google oAuth
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
-// schema
-const User = require('./models/User');
+//session management
+const session = require('express-session'); 
 
-// roles
-const { ensureAuthenticated, ensureSuperUser } = require('./middlewares/auth');
+// bringing data from other files
+const { authMiddleware, ensureAdminUser, generateToken } = require('./middlewares/auth');
+const User = require('./models/User');
 
 const app = express();
 const PORT_HTTP = 3000;
 const PORT_HTTPS = 3443;
 
-// connection to mongo
+// connect to mongoDB
 (async () => {
     try {
         await mongoose.connect('mongodb://localhost:27017/userAuth', {
@@ -42,11 +42,11 @@ const PORT_HTTPS = 3443;
         console.log("MongoDB connected to UserAuth!");
     } catch (err) {
         console.error("MongoDB connection error:", err);
-        process.exit(1); 
+        process.exit(1);
     }
 })();
 
-// Helmet for securing HTTP headers
+// helmet middleware 
 app.use(helmet({
     xFrameOptions: { action: "deny" },
     strictTransportSecurity: {
@@ -55,26 +55,39 @@ app.use(helmet({
     }
 }));
 
-// MIDDLEWARE -  for parsing request bodies
+// parsing data middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// session config
+
+
+// secure session from lab5
 app.use(session({
     secret: process.env.SESSION_SECRET || 'default-secret',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false } // Set to true in production
+    store: MongoStore.create({
+        mongoUrl: 'mongodb://localhost:27017/userAuth',
+        collectionName: 'sessions'
+    }),
+    cookie: {
+        httpOnly: true, // stop client side JS attack
+        secure: process.env.NODE_ENV === 'production', // secure cookies
+        sameSite: 'strict', // stop csrf attacks
+        maxAge: 24 * 60 * 60 * 1000 // store cookie for one day
+    }
 }));
+
 
 
 // initialize passport and session
 app.use(passport.initialize());
-app.use(passport.session());
+app.use(passport.session()); 
 
 
 
-// passport google aOuth
+// passport strategy from ABAC lab
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -95,9 +108,9 @@ passport.use(new GoogleStrategy({
             console.log('User found, updating login count...');
             user.loginCount += 1;
 
-            // Promote to 'superuser' if login count exceeds threshold
+            // when user logs in 3 times they promote to superuser. 
             if (user.loginCount > 3) {
-                user.role = 'superuser';
+                user.role = 'admin';
             }
         }
         await user.save();
@@ -109,7 +122,9 @@ passport.use(new GoogleStrategy({
     }
 }));
 
-// serialize and deserialize user
+
+
+// serialize and deserialize function
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser(async (id, done) => {
     try {
@@ -120,6 +135,8 @@ passport.deserializeUser(async (id, done) => {
     }
 });
 
+
+
 // routes
 app.get('/', (req, res) => {
     res.send('<h1>Welcome to Habit Quest!</h1><a href="/auth/google">Login with Google</a>');
@@ -129,26 +146,60 @@ app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'em
 
 app.get('/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/' }),
-    (req, res) => {
-        res.redirect('/dashboard');
+    async (req, res) => {
+        try {
+            // Generate a JWT token using the generateToken function
+            const token = generateToken(req.user);
+
+            // Store the token in an HTTP-only cookie
+            res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+
+            res.redirect('/dashboard');
+        } catch (err) {
+            console.error('Error generating token:', err.message);
+            res.status(500).send('Internal Server Error');
+        }
     });
 
-app.get('/dashboard', ensureAuthenticated, (req, res) => {
-    res.send(`Welcome ${req.user.username}! Role: ${req.user.role} <a href="/logout">Logout</a>`);
+app.get('/logout', (req, res) => {
+    res.clearCookie('token'); // clear jwt cookie
+    res.redirect('/');
 });
 
-app.get('/super-dashboard', ensureSuperUser, (req, res) => {
-    res.send('<h1>Welcome to the Super User Dashboard!</h1><a href="/logout">Logout</a>');
+app.get('/admin', authMiddleware, ensureAdminUser, (req, res) => {
+    res.send('<h1>Welcome Admin!</h1><a href="/logout">Logout</a>');
 });
 
-app.get('/logout', (req, res, next) => {
-    req.logout(err => {
-        if (err) return next(err);
-        res.redirect('/');
-    });
+app.get('/profile', authMiddleware, (req, res) => {
+    res.send(`
+        <h1>Welcome to your Profile, ${req.user.username}!</h1>
+        <p>Role: ${req.user.role}</p>
+        <a href="/dashboard">Go to Dashboard</a>
+        <a href="/logout">Logout</a>
+    `);
 });
 
-// static file serving
+app.get('/dashboard', authMiddleware, (req, res) => {
+    if (req.user.role === 'admin') {
+        res.send(`
+            <h1>Admin Dashboard</h1>
+            <p>Welcome, ${req.user.username}!</p>
+            <p>You have Admin access.</p>
+            <a href="/admin">Go to Admin Panel</a>
+            <a href="/logout">Logout</a>
+        `);
+    } else {
+        res.send(`
+            <h1>User Dashboard</h1>
+            <p>Welcome, ${req.user.username}!</p>
+            <p>You have basic access.</p>
+            <a href="/profile">Go to Profile</a>
+            <a href="/logout">Logout</a>
+        `);
+    }
+});
+
+// serve static files like for images and css
 app.use('/static', express.static('public', {
     setHeaders: (res, path) => {
         if (path.endsWith('.css')) {
@@ -160,27 +211,21 @@ app.use('/static', express.static('public', {
 }));
 
 // HTTPS Configuration
-const hstsOptions = {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
+const options = {
+    key: fs.readFileSync('hidden/private-key.pem'),
+    cert: fs.readFileSync('hidden/certificate.pem'),
 };
 
 http.createServer(app).listen(PORT_HTTP, () => {
     console.log(`HTTP Server running at http://localhost:${PORT_HTTP}`);
 });
 
-const options = {
-    key: fs.readFileSync('hidden/private-key.pem'),
-    cert: fs.readFileSync('hidden/certificate.pem'),
-};
-
 https.createServer(options, app).listen(PORT_HTTPS, () => {
     console.log(`HTTPS Server running at https://localhost:${PORT_HTTPS}`);
 });
 
-// error handleing 
+// Centralized Error Handling
 app.use((err, req, res, next) => {
     console.error(err.stack);
-    res.status(500).send('Something went wrong!');
+    res.status(500).send('error');
 });
