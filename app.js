@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-// phase one 
+// phase one setup
 const express = require('express');
 const https = require('https');
 const fs = require('fs');
@@ -8,73 +8,124 @@ const http = require('http');
 const hsts = require('hsts');
 const path = require('path');
 
+// DB connetion
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+
+// middlware
+const helmet = require('helmet');
+
+// session
+const session = require('express-session');
+
+// google oAuth
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+
+// schema
+const User = require('./models/User');
+
+// roles
+const { ensureAuthenticated, ensureSuperUser } = require('./middlewares/auth');
+
 const app = express();
 const PORT_HTTP = 3000;
 const PORT_HTTPS = 3443;
 
-const helmet = require('helmet');
-const port = process.env.PORT || 3000;
-
-// phase two
-const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-
-const authRoutes = require('./routes/auth');
-
-const adminRoutes = require('./routes/admin');
-
-/* google oAuth */
-
-
-const session = require('express-session');
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-
-
+// connection to mongo
+(async () => {
+    try {
+        await mongoose.connect('mongodb://localhost:27017/userAuth', {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        });
+        console.log("MongoDB connected to UserAuth!");
+    } catch (err) {
+        console.error("MongoDB connection error:", err);
+        process.exit(1); 
+    }
+})();
 
 // Helmet for securing HTTP headers
-app.use(helmet());
+app.use(helmet({
+    xFrameOptions: { action: "deny" },
+    strictTransportSecurity: {
+        maxAge: 31556952, // 1 year
+        preload: true
+    }
+}));
 
-// Session configuration
+// MIDDLEWARE -  for parsing request bodies
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// session config
 app.use(session({
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || 'default-secret',
     resave: false,
     saveUninitialized: false,
     cookie: { secure: false } // Set to true in production
 }));
 
-// Initialize Passport and session
+
+// initialize passport and session
 app.use(passport.initialize());
 app.use(passport.session());
 
-// User database (in-memory for this example)
-const users = {};
 
-// Passport configuration for Google OAuth
+
+// passport google aOuth
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: "/auth/google/callback"
-}, (accessToken, refreshToken, profile, done) => {
-    const user = {
-        id: profile.id,
-        username: profile.displayName,
-        role: 'user' // Default role
-    };
-    users[profile.id] = user; // Store user in memory
-    return done(null, user);
+}, async (accessToken, refreshToken, profile, done) => {
+    try {
+        console.log('Google profile received:', profile);
+
+        let user = await User.findOne({ googleId: profile.id });
+        if (!user) {
+            console.log('Creating a new user...');
+            user = new User({
+                googleId: profile.id,
+                username: profile.displayName,
+                loginCount: 1
+            });
+        } else {
+            console.log('User found, updating login count...');
+            user.loginCount += 1;
+
+            // Promote to 'superuser' if login count exceeds threshold
+            if (user.loginCount > 3) {
+                user.role = 'superuser';
+            }
+        }
+        await user.save();
+        console.log('User saved successfully:', user);
+        return done(null, user);
+    } catch (err) {
+        console.error('Error in Google Strategy:', err);
+        return done(err, null);
+    }
 }));
 
-// Serialize and deserialize user
+// serialize and deserialize user
 passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser((id, done) => done(null, users[id]));
+passport.deserializeUser(async (id, done) => {
+    try {
+        const user = await User.findById(id);
+        done(null, user);
+    } catch (err) {
+        done(err, null);
+    }
+});
 
-// Routes
+// routes
 app.get('/', (req, res) => {
     res.send('<h1>Welcome to Habit Quest!</h1><a href="/auth/google">Login with Google</a>');
 });
 
-app.get('/auth/google', passport.authenticate('google', { scope: ['profile'] }));
+app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get('/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/' }),
@@ -82,113 +133,37 @@ app.get('/auth/google/callback',
         res.redirect('/dashboard');
     });
 
-app.get('/dashboard', (req, res) => {
-    if (req.isAuthenticated()) {
-        res.send(`Welcome ${req.user.username}! <a href="/logout">Logout</a>`);
-    } else {
-        res.redirect('/');
-    }
+app.get('/dashboard', ensureAuthenticated, (req, res) => {
+    res.send(`Welcome ${req.user.username}! Role: ${req.user.role} <a href="/logout">Logout</a>`);
 });
 
-app.get('/logout', (req, res) => {
+app.get('/super-dashboard', ensureSuperUser, (req, res) => {
+    res.send('<h1>Welcome to the Super User Dashboard!</h1><a href="/logout">Logout</a>');
+});
+
+app.get('/logout', (req, res, next) => {
     req.logout(err => {
-        if (err) { return next(err); }
+        if (err) return next(err);
         res.redirect('/');
     });
 });
 
-
-
-
-
-
-/* google oAuth */
-
-// use admin routes
-app.use('/api/admin', adminRoutes);
-
-// middleware phase One
-
-app.use(
-    helmet({
-        xFrameOptions: { action: "deny" },
-        strictTransportSecurity: {
-            maxAge: 31556952, // 1 year
-            preload: true
-        }
-    })
-);
-
-
-// middleware phase two
-app.use(bodyParser.json());
-
-
-// connect to mongoDB phase two
-mongoose.connect('mongodb://localhost:27017/userAuth', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => console.log("MongoDB connected!"))
-.catch(err => console.log(err));
-
-
-// import routs 
-app.use('/api/auth', authRoutes);
-
-
+// static file serving
 app.use('/static', express.static('public', {
     setHeaders: (res, path) => {
         if (path.endsWith('.css')) {
-            res.set('Cache-Control', 'max-age=86400');
-        }
-        if (path.endsWith('.jpg') || path.endsWith('.png')) {
-            res.set('Cache-Control', 'max-age=2592000');
+            res.set('Cache-Control', 'max-age=86400'); // Cache CSS for 1 day
+        } else if (path.endsWith('.jpg') || path.endsWith('.png')) {
+            res.set('Cache-Control', 'max-age=2592000'); // Cache images for 30 days
         }
     }
 }));
 
-/*
-app.get('/', (req, res) => {
-    res.set('Cache-Control', 'max-age=300, public'); // cache for 5 minutes
-    res.sendFile(path.join(__dirname,'/public/index.html'));
-});
-
-app.get('/secure', (req, res) => {
-    res.set('Cache-Control', 'no-store, no cache, private');
-    res.send('HTTPS Quest Tracker');
-});
-
-app.get('/habits', (req, res) => {
-    res.set('Cache-Control', 'max-age=60, public'); // cache for 1 minute
-    res.sendFile(path.join(__dirname,'public/habits.html'));
-});
-
-app.get('/goals', (req, res) => {
-    res.set('Cache-Control', 'max-age=900, public'); // cache for 15 minutes
-    res.sendFile(path.join(__dirname,'public/goals.html'));
-});
-
-app.get('/profile', (req, res) => {
-    res.set('Cache-Control', 'max-age=3600, private'); // cache for 1 hour
-    res.sendFile(path.join(__dirname,'public/profile.html'));
-});
-
-app.get('/posts', (req, res) => {
-    res.set('Cache-Control', 'max-age=300, public, stale-while-revalidate=86400'); // cache for 5 minutes
-    res.sendFile(path.join(__dirname,'public/posts.html'));
-});
-
-app.get('/posts/:id', (req, res) => {
-    res.set('Cache-Control', 'max-age=300, public'); // cache for 5 minutes
-    res.sendFile(path.join(__dirname,'public/posts.html'));
-});
-
-*/
-
+// HTTPS Configuration
 const hstsOptions = {
-    maxAge: 31536000, 
-    includeSubDomains: true, 
-    preload: true 
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
 };
 
 http.createServer(app).listen(PORT_HTTP, () => {
@@ -200,14 +175,12 @@ const options = {
     cert: fs.readFileSync('hidden/certificate.pem'),
 };
 
-const httpsServer = https.createServer(options, (req, res) => {
-    hsts(hstsOptions)(req, res, () => {
-        app(req, res);
-    });
-});
-
-httpsServer.listen(PORT_HTTPS, () => {
+https.createServer(options, app).listen(PORT_HTTPS, () => {
     console.log(`HTTPS Server running at https://localhost:${PORT_HTTPS}`);
 });
 
-console.log(`PORT_HTTP is set to: ${PORT_HTTP}`);
+// error handleing 
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something went wrong!');
+});
