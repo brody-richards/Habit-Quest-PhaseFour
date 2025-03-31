@@ -32,6 +32,12 @@ const app = express();
 const PORT_HTTP = 3000;
 const PORT_HTTPS = 3443;
 
+
+
+// ejs import
+app.set('view engine', 'ejs');
+app.set('views', './views');
+
 // connect to mongoDB
 (async () => {
     try {
@@ -153,8 +159,12 @@ app.get('/auth/google/callback',
 
             // Store the token in an HTTP-only cookie
             res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
-
-            res.redirect('/dashboard');
+            
+            if (req.user.role === 'admin') {
+                res.redirect('/admin');
+            } else {
+                res.redirect('/dashboard');
+            }
         } catch (err) {
             console.error('Error generating token:', err.message);
             res.status(500).send('Internal Server Error');
@@ -166,37 +176,24 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
+// dashboard for admin users
 app.get('/admin', authMiddleware, ensureAdminUser, (req, res) => {
-    res.send('<h1>Welcome Admin!</h1><a href="/logout">Logout</a>');
+    res.render('admindashboard', { user: req.user });
 });
 
+// profile for admin users
+app.get('/admin/profile', authMiddleware, ensureAdminUser, (req, res) => {
+    res.render('adminprofile', { user: req.user });
+});
+
+// profile for regular users
 app.get('/profile', authMiddleware, (req, res) => {
-    res.send(`
-        <h1>Welcome to your Profile, ${req.user.username}!</h1>
-        <p>Role: ${req.user.role}</p>
-        <a href="/dashboard">Go to Dashboard</a>
-        <a href="/logout">Logout</a>
-    `);
+    res.render('profile', { user: req.user });
 });
 
+//dashboard for reular users
 app.get('/dashboard', authMiddleware, (req, res) => {
-    if (req.user.role === 'admin') {
-        res.send(`
-            <h1>Admin Dashboard</h1>
-            <p>Welcome, ${req.user.username}!</p>
-            <p>You have Admin access.</p>
-            <a href="/admin">Go to Admin Panel</a>
-            <a href="/logout">Logout</a>
-        `);
-    } else {
-        res.send(`
-            <h1>User Dashboard</h1>
-            <p>Welcome, ${req.user.username}!</p>
-            <p>You have basic access.</p>
-            <a href="/profile">Go to Profile</a>
-            <a href="/logout">Logout</a>
-        `);
-    }
+    res.render('dashboard', { user: req.user });
 });
 
 // serve static files like for images and css
