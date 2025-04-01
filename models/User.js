@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema({
     googleId: { type: String, required: true, unique: true },
     username: { type: String, required: true },
     loginCount: { type: Number, default: 0 },
+    email: { type: String, required: false },
     role: { type: String, default: 'user' } // Possible roles: 'user', 'superuser'
 }, { timestamps: true });
 

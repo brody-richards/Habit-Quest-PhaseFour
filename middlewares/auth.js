@@ -5,8 +5,10 @@ const generateToken = (user) => {
     const payload = {
         id: user.id,
         role: user.role,
-        username: user.username
+        username: user.username,
+        email: user.email
     };
+    console.log('PAYLOADDDDD', payload);
     return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 };
 

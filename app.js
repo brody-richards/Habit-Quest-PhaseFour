@@ -100,14 +100,13 @@ passport.use(new GoogleStrategy({
     callbackURL: "/auth/google/callback"
 }, async (accessToken, refreshToken, profile, done) => {
     try {
-        console.log('Google profile received:', profile);
-
         let user = await User.findOne({ googleId: profile.id });
         if (!user) {
             console.log('Creating a new user...');
             user = new User({
                 googleId: profile.id,
                 username: profile.displayName,
+                email: profile.emails[0]?.value,
                 loginCount: 1
             });
         } else {
