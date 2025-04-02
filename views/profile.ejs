@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
+    <script src="/profile.js" defer></script>
 </head>
 <body>
     <h1>User Profile.</h1>
@@ -11,9 +12,30 @@
     <p>You have regular access, your role is <%= user.role %></p>
     <p>Your name is <%= user.username %>.</p>
     <p>Your email is <%= user.email %></p>
-    <div class="form">
-        <p>Form placeholder</p>
+    
+    <div id="formDiv">    
+        <form id="updateForm">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" min="3" max="50">
+        
+            <label for="email">Contact Email:</label>
+            <input type="text" id="email" name="email">
+        
+            <label for="bio">Bio:</label>
+            <input type="text" id="bio" name="bio" max="500">
+        
+            <input type="submit" value="Update">
+        </form>
     </div>
+        
+
+    <div id="updatedProfile">
+        <h2>Updated Profile</h2>
+        <p id="updatedName">Name: </p>
+        <p id="updatedEmail">Contact Email: </p>
+        <p id="updatedBio">Bio: </p>
+    </div>
+
     <a href="/dashboard">Go to your dashboard.</a>
     <a href="/logout">Logout</a>
 </body>

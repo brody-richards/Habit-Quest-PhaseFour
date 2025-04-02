@@ -28,7 +28,10 @@ const userSchema = new mongoose.Schema({
     username: { type: String, required: true },
     loginCount: { type: Number, default: 0 },
     email: { type: String, required: false },
-    role: { type: String, default: 'user' } // Possible roles: 'user', 'superuser'
+    role: { type: String, default: 'user' },
+    accountName: { type: String, required: false },
+    accountEmail: { type: String, required: false },
+    bio: { type: String, required: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

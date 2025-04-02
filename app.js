@@ -107,14 +107,17 @@ passport.use(new GoogleStrategy({
                 googleId: profile.id,
                 username: profile.displayName,
                 email: profile.emails[0]?.value,
-                loginCount: 1
+                loginCount: 1,
+                accountName: profile.displayName,
+                accountEmail: 'test email',
+                bio: 'test bio'
             });
         } else {
             console.log('User found, updating login count...');
             user.loginCount += 1;
 
             // when user logs in 3 times they promote to superuser. 
-            if (user.loginCount > 3) {
+            if (user.loginCount > 30) {
                 user.role = 'admin';
             }
         }
@@ -195,6 +198,33 @@ app.get('/dashboard', authMiddleware, (req, res) => {
     res.render('dashboard', { user: req.user });
 });
 
+
+// send form information to mongo and update profile information including name, email, and bio
+app.post('/profile/update', async (req, res) => {
+    try {
+        const { name, email, bio } = req.body; // take form data from profile.ejs form
+        const userId = req.user.id;
+
+        console.log('DATA RECCCEVED', {name, email, bio});
+
+        const user = await User.findById(userId);
+        if (user) {
+            user.accountName = name || user.accountName;
+            user.accountEmail = email || user.accountEmail;
+            user.bio = bio || user.bio;
+
+            await user.save(); // Save the updated user to the database
+            res.status(200).json({ message: 'Habit Quest Profile updated', user });
+        } else {
+            res.status(404).json({ message: 'Habit Quest User NOT found' });
+        }
+    } catch (err) {
+        console.error('Error updating profile:', err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+
 // serve static files like for images and css
 app.use('/static', express.static('public', {
     setHeaders: (res, path) => {
@@ -205,6 +235,8 @@ app.use('/static', express.static('public', {
         }
     }
 }));
+
+app.use(express.static('public'));
 
 // HTTPS Configuration
 const options = {
