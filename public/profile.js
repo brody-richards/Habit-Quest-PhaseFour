@@ -23,9 +23,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const result = await response.json();
             if (response.ok) {
                 // update values on profile.ejs page
-                document.getElementById('updatedName').textContent = `Name: ${result.user.accountName}`;
-                document.getElementById('updatedEmail').textContent = `Contact Email: ${result.user.accountEmail}`;
-                document.getElementById('updatedBio').textContent = `Bio: ${result.user.bio}`;
+                document.getElementById('updatedName').textContent = `Updated Name: ${result.user.accountName}`;
+                document.getElementById('updatedEmail').textContent = `Updated Email: ${result.user.accountEmail}`;
+                document.getElementById('updatedBio').textContent = `Updated Bio: ${result.user.bio}`;
                 console.log(result.user.accountEmail);
             } else {
                 alert(result.message || 'Failed to update profile.');
