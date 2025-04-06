@@ -28,6 +28,9 @@ const session = require('express-session');
 const { authMiddleware, ensureAdminUser, generateToken } = require('./middlewares/auth');
 const User = require('./models/User');
 
+// express validator 
+const { check, validationResult } = require('express-validator');
+
 const app = express();
 const PORT_HTTP = 3000;
 const PORT_HTTPS = 3443;
@@ -125,7 +128,7 @@ passport.use(new GoogleStrategy({
             user.loginCount += 1;
 
             // when user logs in 3 times they promote to superuser. 
-            if (user.loginCount > 3) {
+            if (user.loginCount > 30) {
                 user.role = 'admin';
             }
         }
@@ -212,22 +215,83 @@ app.get('/dashboard', authMiddleware, (req, res) => {
 });
 
 
+
+// --------------- FROM YOUTUBE VIDEO 
+
+// const urlencodedParser = bodyParser.urlencoded({ extended: false });
+
+// app.get('/test', authMiddleware,(req,res) => {
+//     res.render('test')
+// })
+
+// app.get('/testsuccess', authMiddleware, (req, res) => {
+//     res.render('testsuccess', { user: req.user });
+// });
+
+// app.post('/test', urlencodedParser, [
+//     check('name','Name must be between 3-50 alphabetic characters.')
+//         .exists()
+//         .isLength({min: 3}),
+//     check('email','Email format is not valid.')
+//         .exists()
+//         .isEmail()
+//         .normalizeEmail(),
+//     check('bio','Bio cannot be longer than 500 characters and/or contain special characters.')
+//         .exists()
+//         .isLength({max:500})
+// ], authMiddleware,(req,res) => {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//         // return res.status(422).jsonp(errors.array())
+//         const alert = errors.array();
+//         res.render('test', {
+//             alert
+//         });
+//     } else {
+//         res.render('testsuccess')
+//     }
+//     // res.json(req.body);
+// })
+
+
+
 // send form information to mongo and update profile information including name, email, and bio
-app.post('/profile/update', async (req, res) => {
+app.post('/profile/update', [
+    check('name','Name must be between 3-50 alphabetic characters.')
+        .exists()
+        .isLength({min: 3}),
+    check('email','Email format is not valid.')
+        .exists()
+        .isEmail()
+        .normalizeEmail(),
+    check('bio','Bio cannot be longer than 500 characters and/or contain special characters.')
+        .exists()
+        .isLength({max:500}),
+], authMiddleware, async (req, res) => {
+    const userId = req.user.id;
+    const user = await User.findById(userId); // moved here
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        console.log("Validation errors:", errors.array()); // Log validation errors
+        const alert = errors.array();
+        return res.render('profileupdate', {
+            alert,
+            user // try to pass user even if error if form is not valid
+        });
+    }
+
     try {
         const { name, email, bio } = req.body; // take form data from profile.ejs form
-        const userId = req.user.id;
 
         console.log('DATA RECEIVED', {name, email, bio});
 
-        const user = await User.findById(userId);
         if (user) {
             user.accountName = name || user.accountName;
             user.accountEmail = email || user.accountEmail;
             user.bio = bio || user.bio;
 
             await user.save(); // Save the updated user to the database
-            res.status(200).json({ message: 'Habit Quest Profile updated', user });
         } else {
             res.status(404).json({ message: 'Habit Quest User NOT found' });
         }
@@ -237,6 +301,34 @@ app.post('/profile/update', async (req, res) => {
     }
 });
 
+// // send form information to mongo and update profile information including name, email, and bio
+
+// UPDATE INFO CODE WITHOUT VALIDATION
+
+
+// app.post('/profile/update', async (req, res) => {
+//     try {
+//         const { name, email, bio } = req.body; // take form data from profile.ejs form
+//         const userId = req.user.id;
+
+//         console.log('DATA RECEIVED', {name, email, bio});
+
+//         const user = await User.findById(userId);
+//         if (user) {
+//             user.accountName = name || user.accountName;
+//             user.accountEmail = email || user.accountEmail;
+//             user.bio = bio || user.bio;
+
+//             await user.save(); // Save the updated user to the database
+//             res.status(200).json({ message: 'Habit Quest Profile updated', user });
+//         } else {
+//             res.status(404).json({ message: 'Habit Quest User NOT found' });
+//         }
+//     } catch (err) {
+//         console.error('Error updating profile:', err);
+//         res.status(500).json({ message: 'Internal server error' });
+//     }
+// });
 
 // serve static files like for images and css
 app.use('/static', express.static('public', {

@@ -36,39 +36,29 @@
     </header>
 
     <div class="container">
-        <h1>User Profile.</h1>
-        <!-- <p>Welcome to your profile, <%= user.username %>.</p>
-        <p>You have regular access, your role is <%= user.role %></p>
-        <p>Your name is <%= user.username %>.</p>
-        <p>Your email is <%= user.email %></p> -->
-        <p>Your name is <%= user.accountName %></p>
-        <p>Your email is <%= user.accountEmail %></p>
-        <p>Your bio is <%= user.bio %></p>
+        <h1>TEST</h1>
 
-
-        <!-- BOOTSTRAP ERROR, NOT WORKING -->
-        <% if (typeof alert !== 'undefined' && alert.length > 0) { %>
+        <% if(typeof alert != 'undefined') { %>
             <% alert.forEach(function(error) { %>
                 <div class="alert alert-warning alert-dismissible fade show" role="alert">
                     <%= error.msg %>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
             <% }) %>
-        
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <strong>Fix Errors!</strong> You should check in on some of those fields below.
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
         <% } %>
 
-        
 
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <strong>Fix Errors!</strong> You should check in on some of those fields below.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
 
-    
-    <div id="formDiv">    
+        <div id="formDiv">    
         <h2>Update personal information:</h2>
         <p>Enter the following details.</p>
-        <form id="updateForm" method="POST" action="/profile/update">
+        <form action="/test" method="POST" id="updateForm">
             <label for="name" class="form-label">Name:</label>
             <div class="input-group">
                 <input type="text" id="name" name="name" min="3" max="50" class="form-control">
@@ -83,22 +73,10 @@
             <div class="input-group">
                 <input type="text" id="bio" name="bio" max="500" class="form-control">
             </div>
-
-            <p>CHANGES WILL ONLY BE SUBMITED ONCE CRITERIA IS</p>
         
             <input type="submit" value="Update">
         </form>
     </div>
-
-    <!-- <div id="updatedProfile">
-        <h2>Requested Changes:</h2>
-        <p id="updatedName">Updated Name: </p>
-        <p id="updatedEmail">Updated Email: </p>
-        <p id="updatedBio">Updated Bio: </p>
-    </div> -->
-
-    <p>Please <a href="/logout">Log Back in</a> to view your changes.</p>
-
 </div>
 
 </body>
