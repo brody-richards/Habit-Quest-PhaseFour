@@ -58,7 +58,15 @@ app.use(helmet({
     strictTransportSecurity: {
         maxAge: 31556952, // 1 year
         preload: true
-    }
+    },
+    contentSecurityPolicy: {
+        directives: {
+            "default-src": ["'self'"],
+            "script-src": ["'self'", "https://cdn.jsdelivr.net"],
+            "style-src": ["'self'", "https://cdn.jsdelivr.net"],
+            "font-src": ["'self'", "https://cdn.jsdelivr.net"],
+        },
+    },
 }));
 
 // parsing data middleware
@@ -117,7 +125,7 @@ passport.use(new GoogleStrategy({
             user.loginCount += 1;
 
             // when user logs in 3 times they promote to superuser. 
-            if (user.loginCount > 30) {
+            if (user.loginCount > 3) {
                 user.role = 'admin';
             }
         }
@@ -193,6 +201,11 @@ app.get('/profile', authMiddleware, (req, res) => {
     res.render('profile', { user: req.user });
 });
 
+// profile for regular users
+app.get('/profileupdate', authMiddleware, (req, res) => {
+    res.render('profileupdate', { user: req.user });
+});
+
 //dashboard for reular users
 app.get('/dashboard', authMiddleware, (req, res) => {
     res.render('dashboard', { user: req.user });
@@ -205,7 +218,7 @@ app.post('/profile/update', async (req, res) => {
         const { name, email, bio } = req.body; // take form data from profile.ejs form
         const userId = req.user.id;
 
-        console.log('DATA RECCCEVED', {name, email, bio});
+        console.log('DATA RECEIVED', {name, email, bio});
 
         const user = await User.findById(userId);
         if (user) {

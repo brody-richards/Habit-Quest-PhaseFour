@@ -24,7 +24,7 @@
                         <a href="#" class="nav-link dropdown-toggle active" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Profile</a>
                         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
                             <a class="dropdown-item" href="/profile">Overview</a>
-                            <a class="dropdown-item" href="/profileupdate">Update Personal Information</a>
+                            <a class="dropdown-item" href="/profile">Update Personal Information</a>
                         </div>
                     </li>
                 </ul>
@@ -36,17 +36,48 @@
     </header>
 
     <div class="container">
+        <h1>User Profile.</h1>
         <!-- <p>Welcome to your profile, <%= user.username %>.</p>
         <p>You have regular access, your role is <%= user.role %></p>
         <p>Your name is <%= user.username %>.</p>
         <p>Your email is <%= user.email %></p> -->
-
-        <h1>User Profile:</h1>
+        <p>Your name is <%= user.accountName %></p>
+        <p>Your email is <%= user.accountEmail %></p>
+        <p>Your bio is <%= user.bio %></p>
     
-        <p>Your updated email is <%= user.accountEmail %></p>
-        <p>Your updated name is <%= user.accountName %></p>
-        <p>Your updated bio is <%= user.bio %></p>
+    <div id="formDiv">    
+        <h2>Update personal information:</h2>
+        <p>Enter the following details.</p>
+        <form id="updateForm">
+            <label for="name" class="form-label">Name:</label>
+            <div class="input-group">
+                <input type="text" id="name" name="name" min="3" max="50" class="form-control">
+            </div>
 
+            <label for="email" class="form-label">Contact Email:</label>
+            <div class="input-group">
+                <input type="text" id="email" name="email" class="form-control">
+            </div>
+
+            <label for="bio" class="form-label">Bio:</label>
+            <div class="input-group">
+                <input type="text" id="bio" name="bio" max="500" class="form-control">
+            </div>
+        
+            <input type="submit" value="Update">
+        </form>
     </div>
+
+    <div id="updatedProfile">
+        <h2>Requested Changes:</h2>
+        <p id="updatedName">Updated Name: </p>
+        <p id="updatedEmail">Updated Email: </p>
+        <p id="updatedBio">Updated Bio: </p>
+    </div>
+
+    <p>Please <a href="/logout">Log Back in</a> to view your changes.</p>
+
+</div>
+
 </body>
 </html>
