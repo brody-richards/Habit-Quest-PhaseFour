@@ -196,7 +196,7 @@ app.get('/admin', authMiddleware, ensureAdminUser, (req, res) => {
 
 // profile for admin users
 app.get('/admin/profile', authMiddleware, ensureAdminUser, (req, res) => {
-    res.render('adminprofile', { user: req.user });
+    res.render('adminprofile', { user: req.user }); 
 });
 
 // profile for regular users
@@ -259,14 +259,15 @@ app.get('/dashboard', authMiddleware, (req, res) => {
 app.post('/profile/update', [
     check('name','Name must be between 3-50 alphabetic characters.')
         .exists()
-        .isLength({min: 3}),
+        .isLength({min: 3, max:50}),
     check('email','Email format is not valid.')
         .exists()
         .isEmail()
         .normalizeEmail(),
     check('bio','Bio cannot be longer than 500 characters and/or contain special characters.')
         .exists()
-        .isLength({max:500}),
+        .isLength({max:500})
+        .matches(/^[A-Za-z0-9 ]+$/),
 ], authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const user = await User.findById(userId); // moved here
