@@ -47,6 +47,7 @@
 
 
         <!-- BOOTSTRAP ERROR, NOT WORKING -->
+
         <% if (typeof alert !== 'undefined' && alert.length > 0) { %>
             <% alert.forEach(function(error) { %>
                 <div class="alert alert-warning alert-dismissible fade show" role="alert">
@@ -54,11 +55,15 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             <% }) %>
+        <% } %>
         
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <strong>Fix Errors!</strong> You should check in on some of those fields below.
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
+        <% if (typeof savedMessage !== 'undefined' && savedMessage.length > 0) { %>
+            <% savedMessage.forEach(function(message) { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <%= message.msg %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <% }) %>
         <% } %>
 
         
@@ -81,12 +86,12 @@
 
             <label for="bio" class="form-label">Bio:</label>
             <div class="input-group">
-                <input type="text" id="bio" name="bio" max="500" class="form-control">
+                <textarea type="text" id="bio" name="bio" max="500" class="form-control"></textarea>
             </div>
 
-            <p>CHANGES WILL ONLY BE SUBMITED ONCE CRITERIA IS</p>
+            <!-- <p>CHANGES WILL ONLY BE SUBMITED ONCE CRITERIA IS</p> -->
         
-            <input type="submit" value="Update">
+            <input type="submit" value="Update" class="btn btn-dark mt-3">
         </form>
     </div>
 
@@ -97,7 +102,7 @@
         <p id="updatedBio">Updated Bio: </p>
     </div> -->
 
-    <p>Please <a href="/logout">Log Back in</a> to view your changes.</p>
+    <!-- <p>Please <a href="/logout">Log Back in</a> to view your changes.</p> -->
 
 </div>
 

@@ -293,6 +293,12 @@ app.post('/profile/update', [
             user.bio = bio || user.bio;
 
             await user.save(); // Save the updated user to the database
+
+            const savedMessage = [{msg: 'Profile Updated Successfully'}]
+            return res.render('profileupdate', {
+                savedMessage,
+                user
+            });
         } else {
             res.status(404).json({ message: 'Habit Quest User NOT found' });
         }
