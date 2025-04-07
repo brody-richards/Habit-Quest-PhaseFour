@@ -20,13 +20,10 @@
                         <a href="/dashboard" class="nav-link">Dashboard</a>
                     </li>
 
-                    <li class="nav-item dropdown">
-                        <a href="#" class="nav-link dropdown-toggle active" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Profile</a>
-                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                            <a class="dropdown-item" href="/profile">Overview</a>
-                            <a class="dropdown-item" href="/profile">Update Personal Information</a>
-                        </div>
+                    <li class="nav-item">
+                        <a href="/profileupdate" class="nav-link">Profile</a>
                     </li>
+
                 </ul>
                 <div class="buttons">
                     <a href="/logout" class="btn btn-light">Logout</a>
@@ -41,7 +38,7 @@
         <p>You have regular access, your role is <%= user.role %></p>
         <p>Your name is <%= user.username %>.</p>
         <p>Your email is <%= user.email %></p> -->
-        <p>Your name is <%= user.accountName %></p>
+        <p>Your name is <%= user.name %></p>
         <p>Your email is <%= user.accountEmail %></p>
         <p>Your bio is <%= user.bio %></p>
 

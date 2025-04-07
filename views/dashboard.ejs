@@ -19,12 +19,8 @@
                         <a href="/dashboard" class="nav-link active">Dashboard</a>
                     </li>
 
-                    <li class="nav-item dropdown">
-                        <a href="#" class="nav-link dropdown-toggle" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Profile</a>
-                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                            <a class="dropdown-item" href="/profile">Overview</a>
-                            <a class="dropdown-item" href="/profileupdate">Update Personal Information</a>
-                        </div>
+                    <li class="nav-item">
+                        <a href="/profileupdate" class="nav-link">Profile</a>
                     </li>
                 </ul>
                 <div class="buttons">
@@ -36,7 +32,7 @@
 
     <div class="container">
         <h1>User Dashboard.</h1>
-        <p class="dashHead">Welcome to your dashboard, <%= user.accountName %>.</p>
+        <p class="dashHead">Welcome to your dashboard, <%= user.name %>.</p>
         <p><strong>Your current email is:</strong> <%= user.accountEmail %>.</p>
         <p><strong>Your access is:</strong> Regular.
         <p><strong>Your role is:</strong> <%= user.role %></p>

@@ -155,6 +155,70 @@ passport.deserializeUser(async (id, done) => {
 });
 
 
+  // ENCRYPT FUNCTION - FROM ASH'S GITHUB AND LAB
+
+function caesarEncrypt(text, shift = 1) {
+    if (!text || text.length <= 0) {
+        console.error("Provide an input string");
+        return;
+    }
+    // split the input string and iterate through it
+    return text
+        .split("")
+        .map((char, index) => {
+                // get the current character code
+                let code = char.charCodeAt();
+                // set a new variable for the encrypted character
+                let encryptedChar;
+                // if the character is uppercase, apply the shift to the charCode and use modulus to wrap
+        if (code >= 65 && code <= 90) {
+            encryptedChar = String.fromCharCode(
+                ((((code - 65 + shift) % 26) + 26) % 26) + 65
+        );
+        } else if (code >= 97 && code <= 122) {
+            encryptedChar = String.fromCharCode(
+                ((((code - 97 + shift) % 26) + 26) % 26) + 97
+        );
+        } else {
+            encryptedChar = char;
+        }
+            // return the encrypted version
+            return encryptedChar;
+    })
+        .join("");
+}
+module.exports = caesarEncrypt;
+
+
+// DECRYPT FUNCTION - FROM ASH'S GITHUB AND LAB
+
+function caesarDecrypt(text, shift) {
+    return text
+        .split("")
+        .map((char, index) => {
+            // get the current character code
+            let code = char.charCodeAt();
+            // set a new variable for the encrypted character
+            let encryptedChar;
+            // if the character is uppercase, apply the shift to the charCode and use modulus to wrap
+        if (code >= 65 && code <= 90) {
+            encryptedChar = String.fromCharCode(
+            ((((code - 65 - shift) % 26) + 26) % 26) + 65
+        );
+        } else if (code >= 97 && code <= 122) {
+            encryptedChar = String.fromCharCode(
+                ((((code - 97 - shift) % 26) + 26) % 26) + 97
+        );
+        } else {
+            encryptedChar = char;
+        }
+        // return the encrypted version
+        return encryptedChar;
+    })
+        .join("");
+}
+module.exports = caesarDecrypt;
+
 
 // routes
 app.get('/', (req, res) => {
@@ -205,18 +269,66 @@ app.get('/profile', authMiddleware, (req, res) => {
 });
 
 // profile for regular users
-app.get('/profileupdate', authMiddleware, (req, res) => {
-    res.render('profileupdate', { user: req.user });
+app.get('/profileupdate', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+
+        const shift = parseInt(process.env.SHIFT, 10);
+
+        // Decrypt the email and bio
+        const name = user.accountName;
+        const decryptedEmail = caesarDecrypt(user.accountEmail, shift);
+        const decryptedBio = caesarDecrypt(user.bio, shift);
+
+        return res.render('profileupdate', {
+            user: {
+                name,
+                accountEmail: decryptedEmail, 
+                bio: decryptedBio 
+            }
+        });
+    } catch (err) {
+        console.error('Error:', err);
+    }
 });
 
 //dashboard for reular users
-app.get('/dashboard', authMiddleware, (req, res) => {
-    res.render('dashboard', { user: req.user });
+app.get('/dashboard', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+
+        const shift = parseInt(process.env.SHIFT, 10);
+
+        const role = user.role;
+        const name = user.accountName;
+        const decryptedEmail = caesarDecrypt(user.accountEmail, shift);
+        const decryptedBio = caesarDecrypt(user.bio, shift);
+
+        return res.render('dashboard', {
+            user: {
+                role,
+                name,
+                accountEmail: decryptedEmail, 
+                bio: decryptedBio 
+            }
+        });
+    } catch (err) {
+        console.error('Error rendering dashboard:', err);
+        res.status(500).send('Internal server error');
+    }
 });
 
 
 
-// --------------- FROM YOUTUBE VIDEO 
+// --------------- FROM YOUTUBE VIDEO | Express-validation test
 
 // const urlencodedParser = bodyParser.urlencoded({ extended: false });
 
@@ -287,30 +399,50 @@ app.post('/profile/update', [
 
         console.log('DATA RECEIVED', {name, email, bio});
 
+        shift = parseInt(process.env.SHIFT, 10);
+        // console.log('Shift:', shift, typeof shift);
+
         if (user) {
+            // const { ciphertext, tag } = encryptSymmetric(key, plaintext);
             user.accountName = name || user.accountName;
-            user.accountEmail = email || user.accountEmail;
-            user.bio = bio || user.bio;
+
+            if (email) {
+                const encryptedEmail = caesarEncrypt(email, shift);
+                user.accountEmail = encryptedEmail;
+            }
+            // user.accountEmail = email || user.accountEmail;
+            if (bio) {
+                const encryptedBio = caesarEncrypt(bio, shift);
+                user.bio = encryptedBio;
+            }
+            // user.bio = bio || user.bio;
 
             await user.save(); // Save the updated user to the database
 
             const savedMessage = [{msg: 'Profile Updated Successfully'}]
+
+            const decryptedEmail = caesarDecrypt(user.accountEmail, shift);
+            const decryptedBio = caesarDecrypt(user.bio, shift);
+            user.accountEmail = decryptedEmail;
+            user.bio = decryptedBio;
+            
             return res.render('profileupdate', {
                 savedMessage,
-                user
+                user: {
+                    name,
+                    accountEmail: decryptedEmail, 
+                    bio: decryptedBio
+                }
             });
-        } else {
-            res.status(404).json({ message: 'Habit Quest User NOT found' });
         }
     } catch (err) {
-        console.error('Error updating profile:', err);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('error:', err);
     }
 });
 
 // // send form information to mongo and update profile information including name, email, and bio
 
-// UPDATE INFO CODE WITHOUT VALIDATION
+// UPDATE INFO CODE WITHOUT VALIDATION AND ENCRYPTION
 
 
 // app.post('/profile/update', async (req, res) => {
