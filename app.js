@@ -365,7 +365,7 @@ app.get('/dashboard', authMiddleware, async (req, res) => {
 //     // res.json(req.body);
 // })
 
-
+// test
 
 // send form information to mongo and update profile information including name, email, and bio
 app.post('/profile/update', [
