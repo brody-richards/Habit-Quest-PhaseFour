@@ -128,7 +128,7 @@ passport.use(new GoogleStrategy({
             user.loginCount += 1;
 
             // when user logs in 3 times they promote to superuser. 
-            if (user.loginCount > 30) {
+            if (user.loginCount > 3) {
                 user.role = 'admin';
             }
         }
@@ -468,6 +468,38 @@ app.post('/profile/update', [
 //         res.status(500).json({ message: 'Internal server error' });
 //     }
 // });
+
+
+// app.get('/habits', (req, res) => {
+//     res.set('Cache-Control', 'max-age=60, public'); // cache for 1 minute
+//     res.sendFile(path.join(__dirname,'routes/habits.html'));
+// });
+
+// app.get('/goals', (req, res) => {
+//     res.set('Cache-Control', 'max-age=900, public'); // cache for 15 minutes
+//     res.sendFile(path.join(__dirname,'routes/goals.html'));
+// });
+
+app.get('/adminhabits', authMiddleware, ensureAdminUser, (req, res) => {
+    res.set('Cache-Control', 'max-age=900, public'); // cache for 15 minutes
+    res.render('adminhabits', { user: req.user });
+});
+
+app.get('/admingoals', authMiddleware, ensureAdminUser, (req, res) => {
+    res.set('Cache-Control', 'max-age=60, public'); // cache for 1 minute
+    res.render('adminhabits', { user: req.user });
+});
+
+app.get('/habits', authMiddleware, (req, res) => {
+    res.set('Cache-Control', 'max-age=900, public'); // cache for 15 minutes
+    res.render('habits', { user: req.user });
+});
+
+app.get('/goals', authMiddleware, (req, res) => {
+    res.set('Cache-Control', 'max-age=60, public'); // cache for 1 minute
+    res.render('goals', { user: req.user });
+});
+
 
 // serve static files like for images and css
 app.use('/static', express.static('public', {
