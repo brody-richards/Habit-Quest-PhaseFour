@@ -128,7 +128,7 @@ passport.use(new GoogleStrategy({
             user.loginCount += 1;
 
             // when user logs in 3 times they promote to superuser. 
-            if (user.loginCount > 3) {
+            if (user.loginCount > 30) {
                 user.role = 'admin';
             }
         }
