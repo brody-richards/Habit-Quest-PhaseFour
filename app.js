@@ -296,7 +296,7 @@ app.get('/profileupdate', authMiddleware, async (req, res) => {
     }
 });
 
-//dashboard for reular users
+//dashboard for regular users
 app.get('/dashboard', authMiddleware, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
