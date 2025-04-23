@@ -124,14 +124,6 @@ passport.use(new GoogleStrategy({
                 accountEmail: 'test email',
                 bio: 'test bio'
             });
-        } else {
-            console.log('User found, updating login count...');
-            user.loginCount += 1;
-
-            // when user logs in 3 times they promote to superuser. 
-            if (user.loginCount > 30) {
-                user.role = 'admin';
-            }
         }
         await user.save();
         console.log('User saved successfully:', user);
