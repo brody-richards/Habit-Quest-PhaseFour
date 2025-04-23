@@ -57,6 +57,7 @@ app.set('views', './views');
 
 // helmet middleware 
 app.use(helmet({
+    xxsFilter: true,
     xFrameOptions: { action: "deny" },
     strictTransportSecurity: {
         maxAge: 31556952, // 1 year

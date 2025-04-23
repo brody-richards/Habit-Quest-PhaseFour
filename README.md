@@ -37,181 +37,77 @@ To configure the server, the following steps were taken:
 5. Ensure oAuth credentials and setup has been implemented correctly. 
 
 
-## Input Validation Techniques
 
-For the input validation on Habit Quest, I used the express-validator library, which can be installed through Node. I chose this library after watching a thorough video on how to implement it in an Express application. It took many hours to fully understand the concept, but once I did, I integrated it into the /profile/update route of my express application. 
+# Part A - Threat Model
 
-Using online resources, including article and the documentation, i was able to figure out how to ensure that my form only accepts safe and expected data. 
+## Critical Assets of Habit Quest
 
+### User Data
+User data is the most critical asset of Habit Quest. The security of the clients and their personal information should always be the top priority. 
 
-The following fields appear in my app.js file using the express-validator library:
+Google id – unique ID assigned to a google account
+Username – full name on google account
+Email – email on google account
+loginCount – number of times the users has logged into the application
+accountName – Account name saved on profile from phase three (different from google username above)
+accountEmail – Account email saved on profile from phase three (different from google email above)
+bio – account bio saved on profile from phase three.
 
-    app.post('/profile/update'),
-        check('name','Name must be between 3-50 alphabetic characters.')
-            .exists()
-            .isLength({min: 3, max:50}),
-        check('email','Email format is not valid.')
-            .exists()
-            .isEmail()
-            .normalizeEmail(),
-        check('bio','Bio cannot be longer than 500 characters and/or contain special characters.')
-            .exists()
-            .isLength({max:500})
-            .matches(/^[A-Za-z0-9 ]+$/),
+### Session Data
+Jsonwebtoken – token generated after login with saved data from database. Data saved in this token include a payload of an id, role, username, email, accountEmail, accountName, and bio. 
+Token is valid for 1hr after it is generated. 
+Token is cleared when a user logs out of the application. 
 
-### Name
--Ensures that the field exists, has a minimum length of 3, and a maximum length of 50 characters.
+### Databases
+Mongodb – database used to save user data from schema. Sensitive data is encrypted when sent to databse, and decrypted when data is pulled for users to view.  
 
-### Email
--Ensures that the field exists, follows a valid email format, and is normalized before submission. 
-
-### Bio
--Ensures that the field exists, is no longer than 500 characters, and contains no special characters (only letters, spaces, and numbers).
-
-Overall, while it took time to understand, the express-validator library was a good tool for ensuring that only correct data was passed on to the database, as well as used throughout the website. 
+### Codebases and Infrastructure
+The majority of the dependencies and libraries used in Habit Quest could be classified as third-party. Because of this, it’s crucial to keep these codebases updated regularly to mitigate potential security risks.  
+Examples of these critical asset dependencies could include
+-	Passport-google-oauth20
+-	Connect-mongo
+-	Jsonwebtoken
 
 
 
-## Output Encoding Methods
-
-For output encoding, I used EJS files to ensure that the data displayed on the screen was safe for the user. I applied this technique throughout the different pages of the website, used mostly on the dashboard, where users can view their updated information such as their name, email, and bio. This method helped prevent common attacks like XXS and SQL injection. 
-
-Here is an example of the EJS template used on the user dashboard page. 
-
-        <h1>User Dashboard.</h1>
-        <p class="dashHead">Welcome to your dashboard, <%= user.name %>.</p>
-        <p><strong>Your access is:</strong> Regular.
-        <p><strong>Your role is:</strong> <%= user.role %></p>
-        <p><strong>Your name is:</strong> <%= user.name %></p>
-        <p><strong>Your email is:</strong> <%= user.accountEmail %>.</p>
-        <p><strong>Your bio is:</strong> <%= user.bio %></p>
-
-Using EJS tags properly helps escape certain content, such as a <script></script> tag. Instead of executing JS on the page, it renders potentially harmful code as plain text. This prevents malicious scripts from being injected and executed in the browser. 
-
-Specifically, the '<%= %>' syntax helps escape and safely prints user information, ensuring that no unwanted or unexpected functionalities take place. 
-
-Overall, using EJS was an effective way to help secure Habit Quest, helping ensure that only safe data is rendered to the user. 
+## How might hackers attack Habit Quest?
 
 
+### SQL Injection
+When a hacker targets the database of an application to try and get stored information. These targets happen when something like form fields have not been properly secured. In Habit Quest, this attack could happen in the profile update form field that is connected to the mongo database. These requests must be properly escaped, not allowing any SQL to be used inside these areas. 
 
-## Encryption Techniques Used
+### Cross-site scripting (XXS)
+When an attacker injects malicious code into a website, altering the DOM and adding harmful elements. These attackers target sensitively stored information like cookies and personal information. These targets happen when information has not been sanitized or escaped properly. In Habit Quest, this attack could happen in the profile form fields if the data is not sanitized properly. 
 
-For encryption, cipher functions were created to ensure that the data being sent and stored in the database in encrypted, while the data being retrieved and displayed properly is decrypted. Building on Ash's github example, I implemented two functions into my code to support this functionality. 
-
-        function caesarEncrypt(text, shift = 1) {
-            if (!text || text.length <= 0) {
-                console.error("Provide an input string");
-                return;
-            }
-            // split the input string and iterate through it
-            return text
-                .split("")
-                .map((char, index) => {
-                        // get the current character code
-                        let code = char.charCodeAt();
-                        // set a new variable for the encrypted character
-                        let encryptedChar;
-                        // if the character is uppercase, apply the shift to the charCode and use modulus to wrap
-                if (code >= 65 && code <= 90) {
-                    encryptedChar = String.fromCharCode(
-                        ((((code - 65 + shift) % 26) + 26) % 26) + 65
-                );
-                } else if (code >= 97 && code <= 122) {
-                    encryptedChar = String.fromCharCode(
-                        ((((code - 97 + shift) % 26) + 26) % 26) + 97
-                );
-                } else {
-                    encryptedChar = char;
-                }
-                    // return the encrypted version
-                    return encryptedChar;
-            })
-                .join("");
-        }
-        module.exports = caesarEncrypt;
+### Cross-site request forgery (CSRF)
+When attackers trick authenticated users into sending requests without their knowledge. These are often trusted application to the user where they are already logged in, and their guard is often down. In Habit Quest, these could be used when a cookie or token is stolen and used to impersonate that user. 
 
 
-        // DECRYPT FUNCTION - FROM ASH'S GITHUB AND LAB
+## STRIDE Framework
 
-        function caesarDecrypt(text, shift) {
-            return text
-                .split("")
-                .map((char, index) => {
-                    // get the current character code
-                    let code = char.charCodeAt();
-                    // set a new variable for the encrypted character
-                    let encryptedChar;
-                    // if the character is uppercase, apply the shift to the charCode and use modulus to wrap
-                if (code >= 65 && code <= 90) {
-                    encryptedChar = String.fromCharCode(
-                    ((((code - 65 - shift) % 26) + 26) % 26) + 65
-                );
-                } else if (code >= 97 && code <= 122) {
-                    encryptedChar = String.fromCharCode(
-                        ((((code - 97 - shift) % 26) + 26) % 26) + 97
-                );
-                } else {
-                    encryptedChar = char;
-                }
-                // return the encrypted version
-                return encryptedChar;
-            })
-                .join("");
-        }
-        module.exports = caesarDecrypt;
+The STRIDE framework helped me identify the potential threats that Habit Quest was open to. The following are examples of the information that creating the stride framework helped mitigate. 
 
-These functions were then passed into my database during the update process:
+### Spoofing 
+In Habit Quest, CSRF attacks could be used here, as attackers could be illegally accessing another users authentication information from cookies that have been stolen. Once logged in, they can steal users other personal information such as google id, email, and passwords. 
 
-        if (user)
-            // const { ciphertext, tag } = encryptSymmetric(key, plaintext);
-            user.accountName = name || user.accountName;
+### Tampering
+In Habit Quest, SQL injection attacks could be used in the form fields to pull data from the central database. 
 
-            if (email) {
-                const encryptedEmail = caesarEncrypt(email, shift);
-                user.accountEmail = encryptedEmail;
-            }
-            // user.accountEmail = email || user.accountEmail;
-            if (bio) {
-                const encryptedBio = caesarEncrypt(bio, shift);
-                user.bio = encryptedBio;
-            }
-            // user.bio = bio || user.bio;
+### Repudiation
+In Habit Quest, A user could log into  their profile, but later deny that they actually made this change without proper system logs, as they are trying to exploit the company. 
 
-            await user.save(); // Save the updated user to the database
+### Information Disclosure 
+In Habit Quest, this type of threat could happen when user data is exposed, say in the API call to google, or poor session handling on the Habit Quest website. 
 
-            const savedMessage = [{msg: 'Profile Updated Successfully'}]
+### Denial of Service
+In Habit Quest, malicious hackers could use DOS attacks if they have gained access to database information, such as names, emails, and any other log in or personal information. 
 
-            const decryptedEmail = caesarDecrypt(user.accountEmail, shift);
-            const decryptedBio = caesarDecrypt(user.bio, shift);
-            user.accountEmail = decryptedEmail;
-            user.bio = decryptedBio;
-
-I used the encrypt function when storing information and sending it to the database, and the decrypt function when retrieving that data and displaying it to the user. 
-
-the shift variable, which was used as part of the encryption function, is stored in my .env file to ensure that no user could access or see this sensitive information.
-
-In the future, I plan to implement libraries such as Crypto to further strengthen the security of my website.
+### Elevation of Privilege 
+In Habit Quest, this could happen if the wrong user is granted admin or superadmin access, for example, if the current issue with users being promoted to these roles after a certain amount of log in attempts. This could compromise other users and their information to malicious hackers. 
 
 
-
-## Third-Party Library Dependency Management
-
-In terms of third-party dependency management, I drew inspiration from the example provided in Ash's GitHub repository.
-
-This setup ensures that Node's audit feature runs automatically once a week, identifying any vulnerabilities in outdated libraries and dependencies. By choosing to automate this process, potential issues can be detected and address without the need from the developer to find it themselves. 
-
-This file can be found in the .github/workflows path. 
+Habit Quests threat model has been submitted to Brightspace. 
 
 
+#
 
-## Lessons Learned
-
-Overall, this was once again quite a challenging assignment for me. I can see myself getting more comfortable with Node, but I know I still have a long way to go.
-
-One area that improved for me during this phase was the need to consult documentation rather than trying to find a specific answer in a YouTube video or online article. I've found that there are often so may bugs or issues that can arise, and trying to find an exact solution isn't always the best path forward. After Ash's great lecture on breaking down a problem into smaller parts and trying to understand the logic before writing code, I was able to slow down and not get overwhelmed so quickly. 
-
-Starting small and building up features was an effective approach for me during this assignment. After watching a YouTube tutorial on express-validator for example, I referred to the documentation to get an idea of where to start. I first checked these docs to see how to set a minimum number of characters. From there, I worked my way forward to achieve the other goals. This technique was a big improvement compared to phase two, where I found myself getting overwhelmed and lost very quickly. 
-
-Overall, while this phase still required weeks of research, I am proud of the results I achieved. 
-
-Also, I should note that all the resources I used have been included in an attribution document submitted to Brightspace. 
