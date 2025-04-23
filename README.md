@@ -45,13 +45,27 @@ To configure the server, the following steps were taken:
 ### User Data
 User data is the most critical asset of Habit Quest. The security of the clients and their personal information should always be the top priority. 
 
-Google id – unique ID assigned to a google account
-Username – full name on google account
-Email – email on google account
-loginCount – number of times the users has logged into the application
-accountName – Account name saved on profile from phase three (different from google username above)
-accountEmail – Account email saved on profile from phase three (different from google email above)
-bio – account bio saved on profile from phase three.
+#### Google id
+unique ID assigned to a google account
+
+#### Username
+Full name on google account
+
+#### Email
+Email on google account
+
+#### loginCount
+Number of times the users has logged into the application
+
+#### accountName
+Account name saved on profile from phase three (different from google username above)
+
+#### accountEmail
+Account email saved on profile from phase three (different from google email above)
+
+#### bio
+account bio saved on profile from phase three.
+
 
 ### Session Data
 Jsonwebtoken – token generated after login with saved data from database. Data saved in this token include a payload of an id, role, username, email, accountEmail, accountName, and bio. 
